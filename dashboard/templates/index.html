@@ -1,0 +1,162 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Socket-Test</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.min.js"></script>
+    <script src="//code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.5/socket.io.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" type="text/javascript"></script>
+    <script type="text/javascript" charset="utf-8">
+        var socket = io('http://' + document.domain + ':' + location.port);
+
+        socket.on('my response', function(msg, cb) {
+            console.log('GOT Response', msg, cb);
+        });
+
+        var amounts = [];
+        var movingAvgs = [];
+
+        function append(arr, amt, limit){
+            console.log(arr.length, limit, arr)
+            if (arr.length == limit)
+                arr.shift()
+            arr.push(amt)
+            return arr
+        }
+
+        function renderPieChart(data){
+            var ctxP = document.getElementById("pieChart").getContext('2d');
+            var myPieChart = new Chart(ctxP, {
+              type: 'pie',
+              data: {
+                labels: ["Fraud", "Legit"],
+                datasets: [{
+                  data: data,
+                  backgroundColor: ["#F7464A", "#46BFBD"],
+                  // hoverBackgroundColor: ["#FF5A5E", "#5AD3D1"]
+                }]
+              },
+              options: {
+                animation: {
+                    duration: 0
+                }
+              }
+            });
+        }
+
+        function renderLineChart(arr, amt, mva_arr, avg_amt){
+            var options = {
+              type: 'line',
+              data: {
+                labels: ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"],
+                datasets: [
+                    {
+                      label: 'Amount',
+                      data: append(arr, amt, 10),
+                    borderWidth: 1
+                    },  
+                        {
+                            label: 'Average Amount',
+                            data: append(mva_arr, avg_amt, 10),
+                            borderWidth: 1
+                        }
+                    ]
+              },
+              options: {
+                scales: {
+                    yAxes: [{
+                    ticks: {
+                            max: 10000,
+                            min: 0,
+                            stepSize: 1000
+                    }
+                  }]
+                },
+                animation: {
+                    duration: 0
+                }
+              }
+            }
+
+            var ctx = document.getElementById('lineChart').getContext('2d');
+            var myLineChart = new Chart(ctx, options);
+
+        }
+
+        socket.on('legit', function(msg, cb) {
+            // console.log('Legit Response', msg, cb);
+            $('#legit-count').text(msg.num_legit)
+            $('#avg-legit-amt').text(msg.avg_legit_amt)
+            $('#avg-total-amt').text(msg.avg_total)
+            $('#total').text(msg.num_total)
+
+            renderLineChart(amounts, msg.amount, movingAvgs, msg.avg_total)
+            renderPieChart([msg.num_fraud, msg.num_legit])
+
+
+        });
+
+        socket.on('fraud', function(msg, cb) {
+            // console.log('Fraud Response', msg, cb);
+            $('#fraud-count').text(msg.num_fraud)
+            $('#avg-fraud-amt').text(msg.avg_fraud_amt)
+            $('#avg-total-amt').text(msg.avg_total)
+            $('#total').text(msg.num_total)
+
+            renderLineChart(amounts, msg.amount, movingAvgs, msg.avg_total)
+            renderPieChart([msg.num_fraud, msg.num_legit])
+        });
+
+        socket.on('connect', function() {
+            console.log('my response', {data: 'I\'m connected!'});
+        });
+
+
+    </script>
+</head>
+<body style="background-color:white;">
+    <div class="container m-auto">
+        <div class="row">
+            <div class="col-6 card">
+              <canvas id="pieChart" style="max-width: 300px;"></canvas>
+            </div>
+            <div class="col-6 d-flex justify-content-center card">
+                <div>
+                    <h4>Total Transactions Processed</h4><div id="total">0</div>
+                </div>
+                <div>
+                    <h4>Average Transaction Amount</h4><div id="avg-total-amt">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="row d-flex justify-content-center">
+            <div class="col-6 card" id="legit">
+                <div>
+                    <h4>Legit Transaction Count</h4><div id="legit-count">0</div>
+                </div>
+                <div>
+                    <h4>Legit Transaction Average Amount</h4><div id="avg-legit-amt">0</div>
+                </div>
+            </div>
+            <div class="col-6 card" id="fraud">
+                <div>
+                    <h4>Fraud Transaction Count</h4><div id="fraud-count">0</div>
+                </div>
+                <div>
+                    <h4>Fraud Transaction Average Amount</h4><div id="avg-fraud-amt">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-2"></div>
+            <div class="col-8 card">
+              <canvas id="lineChart" style="max-width: 700px;"></canvas>
+            </div>
+            <div class="col-2"></div>
+        </div>
+
+    </div>
+
+</body>
+</html>
