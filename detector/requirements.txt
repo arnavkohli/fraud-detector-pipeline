@@ -1,0 +1,4 @@
+kafka-python
+python-socketio==5.0.4
+aiohttp
+requests
